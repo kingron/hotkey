@@ -1,54 +1,54 @@
-# Hotkey 配置文件
-# 注意：加号和等号不能作为快捷键设置
+# Hotkey configuration
+# Note: + and = can't not set as hotkey
 
-# 特殊键列表，不分大小写
+# Special keys
 # F1,F2,F3,F4,F5,F6,F7,F8,F9,F10,F11,F12
 # Left,Up,Right,Down,PageUp,PageDown,Home,End,Insert,Delete
 # Print,Pause,Scroll,Enter,Escape,CapsLock,Space,Backspace,NumLock,Select,Tab
 # Numpad0,Numpad1,Numpad2,Numpad3,Numpad4,Numpad5,Numpad6,Numpad7,Numpad8,Numpad9
 # Add,Subtract,Multiply,Decimal,Divide,Decimal,Separator
 
-# 特殊操作列表，区分大小写
-# OnTop = 切换活动窗口置顶
-# Close = 关闭活动窗口
-# Minimize = 最小化活动窗口
-
-# Switch TopMost active window
-win+z=OnTop
+# Reserved actions, case senstive
+# OnTop = Switch TopMost for active window
+# Close = Close active window
+# Minimize = Minimize active window
 
 # Minimize active window
 win+`=Minimize
 
-# win+a=打开系统通知
-# win+b=跳到系统托盘
+# win+a=Open system notification
+# win+b=Jump to system tray
 win+c=cmd.exe
-# win+d=显示桌面
-# win+e=打开资源管理器
+# win+d=Show desktop
+# win+e=Open explorer
 win+f=notepad config.txt
-# win+g=打开游戏工具
-win+h=
-# win+i=打开系统设置
+# win+g=Open game bar
+win+h=https://www.bing.com
+# win+i=Open system settings
 win+j=
-# win+k=打开链接设备
-# win+l=锁定屏幕
-# win+m=最小化所有窗口
+# win+k=Open device link
+# win+l=Lock computer
+# win+m=Minimize all windows
 win+n=notepad.exe
 win+o=
-# win+p=打开投影显示
+# win+p=Open screen project
 
 # Close active window
 win+q=Close
 
-# win+r=打开运行对话框
+# win+r=Open run dialog
 win+s=
-# win+t=打开任务栏按钮
-# win+u=打开显示设置
-# win+v=打开系统多重剪切板
-# win+w=打开系统白板
-# win+x=打开系统移动中心
+# win+t=Open task bar button
+# win+u=Open display settings
+# win+v=Open multi-clipboard
+# win+w=Open input pen
+# win+x=Open mobility center
 win+y=
-win+z=
-# win+1~0=打开任务栏的第1~10个应用程序
+
+# Switch TopMost active window
+win+z=OnTop
+
+# win+1~0=Open the 1~10 application which pinned in task bar
 win+-=
 win+Backspace=
 
