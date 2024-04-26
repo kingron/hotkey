@@ -1,5 +1,165 @@
-# Switch TopMost for active window
-win+alt+h=OnTop
-win+shift+c=cmd.exe
-win+shift+n=notepad.exe
-win+alt+c=calc.exe
+# Hotkey 配置文件
+# 注意：加号和等号不能作为快捷键设置
+
+# 特殊键列表，不分大小写
+# F1,F2,F3,F4,F5,F6,F7,F8,F9,F10,F11,F12
+# Left,Up,Right,Down,PageUp,PageDown,Home,End,Insert,Delete
+# Print,Pause,Scroll,Enter,Escape,CapsLock,Space,Backspace,NumLock,Select,Tab
+# Numpad0,Numpad1,Numpad2,Numpad3,Numpad4,Numpad5,Numpad6,Numpad7,Numpad8,Numpad9
+# Add,Subtract,Multiply,Decimal,Divide,Decimal,Separator
+
+# 特殊操作列表，区分大小写
+# OnTop = 切换活动窗口置顶
+# Close = 关闭活动窗口
+# Minimize = 最小化活动窗口
+
+# Switch TopMost active window
+win+z=OnTop
+
+# Minimize active window
+win+`=Minimize
+
+# win+a=打开系统通知
+# win+b=跳到系统托盘
+win+c=cmd.exe
+# win+d=显示桌面
+# win+e=打开资源管理器
+win+f=notepad config.txt
+# win+g=打开游戏工具
+win+h=
+# win+i=打开系统设置
+win+j=
+# win+k=打开链接设备
+# win+l=锁定屏幕
+# win+m=最小化所有窗口
+win+n=notepad.exe
+win+o=
+# win+p=打开投影显示
+
+# Close active window
+win+q=Close
+
+# win+r=打开运行对话框
+win+s=
+# win+t=打开任务栏按钮
+# win+u=打开显示设置
+# win+v=打开系统多重剪切板
+# win+w=打开系统白板
+# win+x=打开系统移动中心
+win+y=
+win+z=
+# win+1~0=打开任务栏的第1~10个应用程序
+win+-=
+win+Backspace=
+
+ctrl+win+a=
+ctrl+win+b=
+ctrl+win+c=
+ctrl+win+d=
+ctrl+win+e=
+ctrl+win+f=
+ctrl+win+g=
+ctrl+win+h=
+ctrl+win+i=
+ctrl+win+j=
+ctrl+win+k=
+ctrl+win+l=
+ctrl+win+m=
+ctrl+win+n=
+ctrl+win+o=
+ctrl+win+p=
+ctrl+win+q=
+ctrl+win+r=
+ctrl+win+s=
+ctrl+win+t=
+ctrl+win+u=
+ctrl+win+v=
+ctrl+win+w=
+ctrl+win+x=
+ctrl+win+y=
+ctrl+win+z=
+
+alt+win+a=
+alt+win+b=
+alt+win+c=
+alt+win+d=
+alt+win+e=
+alt+win+f=
+alt+win+g=
+alt+win+h=
+alt+win+i=
+alt+win+j=
+alt+win+k=
+alt+win+l=
+alt+win+m=
+alt+win+n=
+alt+win+o=
+alt+win+p=
+alt+win+q=
+alt+win+r=
+alt+win+s=
+alt+win+t=
+alt+win+u=
+alt+win+v=
+alt+win+w=
+alt+win+x=
+alt+win+y=
+alt+win+z=
+
+shift+win+a=
+shift+win+b=
+shift+win+c=
+shift+win+d=
+shift+win+e=
+shift+win+f=
+shift+win+g=
+shift+win+h=
+shift+win+i=
+shift+win+j=
+shift+win+k=
+shift+win+l=
+shift+win+m=
+shift+win+n=
+shift+win+o=
+shift+win+p=
+shift+win+q=
+shift+win+r=
+shift+win+s=
+shift+win+t=
+shift+win+u=
+shift+win+v=
+shift+win+w=
+shift+win+x=
+shift+win+y=
+shift+win+z=
+
+ctrl+F1=
+ctrl+F12=
+Alt+F1=
+Alt+F12=
+Shift+F1=
+Shift+F12=
+Ctrl+Shift+F1=
+Ctrl+Shift+F12=
+Ctrl+Alt+Shift+F1=
+Ctrl+Alt+Shift+F12=
+
+win+Numpad0=
+win+Numpad9=
+win+Add=
+win+Subtract=
+win+Multiply=
+win+Divide=
+win+Decimal=
+win+Separator=
+
+win+Left=
+win+Right=
+win+Up=
+win+Down=
+win+PageUp=
+win+PageDown=
+win+Home=
+win+End=
+win+Insert=
+win+Delete=
