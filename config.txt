@@ -1,0 +1,5 @@
+# Switch TopMost for active window
+win+alt+h=OnTop
+win+shift+c=cmd.exe
+win+shift+n=notepad.exe
+win+alt+c=calc.exe
