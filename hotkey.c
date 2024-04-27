@@ -5,9 +5,9 @@
 #pragma comment(lib, "shell32")
 #pragma comment(lib, "psapi")
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <windows.h>
-#include <stdio.h>
 
 #ifdef UNICODE
 #define U(x) L##x
@@ -39,27 +39,31 @@
 #define my_fopen fopen
 #endif
 
-typedef struct _NOTIFYICONDATA
-{
-    DWORD cbSize;
-    HWND hWnd;
-    UINT uID;
-    UINT uFlags;
-    UINT uCallbackMessage;
-    HICON hIcon;
-    MCHAR szTip[128];
-    DWORD dwState;
-    DWORD dwStateMask;
-    MCHAR szInfo[256];
-    union
-    {
-        UINT uTimeout;
-        UINT uVersion;
-    } DUMMYUNIONNAME;
-    MCHAR szInfoTitle[64];
-    DWORD dwInfoFlags;
+#define MAX_STACK_SIZE 10
+typedef struct {
+    void* items[MAX_STACK_SIZE];
+    int top;
+} Stack;
+
+typedef struct _NOTIFYICONDATA {
+  DWORD cbSize;
+  HWND hWnd;
+  UINT uID;
+  UINT uFlags;
+  UINT uCallbackMessage;
+  HICON hIcon;
+  MCHAR szTip[128];
+  DWORD dwState;
+  DWORD dwStateMask;
+  MCHAR szInfo[256];
+  union {
+    UINT uTimeout;
+    UINT uVersion;
+  } DUMMYUNIONNAME;
+  MCHAR szInfoTitle[64];
+  DWORD dwInfoFlags;
 #if (_WIN32_IE >= 0x600)
-    GUID guidItem;
+  GUID guidItem;
 #endif
 } NOTIFYICONDATA, *PNOTIFYICONDATA;
 
@@ -71,6 +75,7 @@ void ToggleTopmost(HWND hWnd);
 
 HWND g_hWnd;
 MCHAR g_ballonInfo[256] = {0};
+Stack stack;
 
 #define _TRUNCATE ((size_t)-1)
 #define MAX_BUFF 4096
@@ -84,27 +89,56 @@ MCHAR g_ballonInfo[256] = {0};
 #define NIM_ADD 0x00000000
 #define NIM_DELETE 0x00000002
 
-typedef struct
-{
-    UINT modifier;
-    UINT key;
-    MCHAR *action;
+void init(Stack* stack) {
+  stack->top = -1;
+}
+
+int isFull(Stack* stack) {
+  return stack->top == MAX_STACK_SIZE - 1;
+}
+
+int isEmpty(Stack* stack) {
+  return stack->top == -1;
+}
+
+BOOLEAN push(Stack* stack, void* item) {
+  if (!isFull(stack)) {
+    stack->top++;
+    stack->items[stack->top] = item;
+    return TRUE;
+  } else {
+    MessageBox(GetForegroundWindow(), U("Too many hide windows"), U("Error"), MB_ICONERROR | MB_OK);
+    return FALSE;
+  }
+}
+
+void* pop(Stack* stack) {
+  if (!isEmpty(stack)) {
+    void* item = stack->items[stack->top];
+    stack->top--;
+    return item;
+  } else {
+    MessageBox(GetForegroundWindow(), U("No hidden window"), U("Error"), MB_ICONERROR | MB_OK);
+    return NULL;
+  }
+}
+
+typedef struct {
+  UINT modifier;
+  UINT key;
+  MCHAR *action;
 } HotkeyAction;
 
 HotkeyAction *hotkeyActions = NULL;
 int numHotkeys = 0;
 
-void ToggleTopmost(HWND hWnd)
-{
-    LONG_PTR exStyle = GetWindowLong(hWnd, GWL_EXSTYLE);
-    if (exStyle & WS_EX_TOPMOST)
-    {
-        SetWindowPos(hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-    }
-    else
-    {
-        SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-    }
+void ToggleTopmost(HWND hWnd) {
+  LONG_PTR exStyle = GetWindowLong(hWnd, GWL_EXSTYLE);
+  if (exStyle & WS_EX_TOPMOST) {
+    SetWindowPos(hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+  } else {
+    SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+  }
 }
 
 #ifdef UNICODE
@@ -113,160 +147,152 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 int main(int argc, char *argv[])
 #endif
 {
-    HANDLE hMutex = CreateMutex(NULL, TRUE, U("llds_hotkey"));
-    if (GetLastError() == ERROR_ALREADY_EXISTS)
-    {
-        CloseHandle(hMutex);
-        return 0;
-    }
+  HANDLE hMutex = CreateMutex(NULL, TRUE, U("llds_hotkey"));
+  if (GetLastError() == ERROR_ALREADY_EXISTS) {
+    CloseHandle(hMutex);
+    return 0;
+  }
 
-    g_hWnd = CreateWindowEx(0, U("STATIC"), U("Hotkey"), WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 0, 0, NULL, NULL, NULL, NULL);
-    if (g_hWnd == NULL)
-    {
-        return 1;
-    }
+  init(&stack);
+  g_hWnd = CreateWindowEx(0, U("STATIC"), U("Hotkey"), WS_OVERLAPPEDWINDOW,
+                          CW_USEDEFAULT, CW_USEDEFAULT, 0, 0, NULL, NULL, NULL, NULL);
+  if (g_hWnd == NULL) {
+    return 1;
+  }
 
     SetWindowLong(g_hWnd, GWLP_WNDPROC, (LONG_PTR)WndProc);
+    SetWindowLong(g_hWnd, GWLP_WNDPROC, (LONG_PTR)WndProc);
 
-    LoadConfig();
-    AddTrayIcon(g_hWnd);
-    EmptyWorkingSet(GetCurrentProcess());
+  SetWindowLong(g_hWnd, GWLP_WNDPROC, (LONG_PTR)WndProc);
 
-    MSG msg;
-    while (GetMessage(&msg, NULL, 0, 0))
-    {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-    }
+  LoadConfig();
+  AddTrayIcon(g_hWnd);
+  EmptyWorkingSet(GetCurrentProcess());
 
-    for (int i = 0; i < numHotkeys; i++)
-    {
-        UnregisterHotKey(g_hWnd, i + 1);
-        free(hotkeyActions[i].action);
-    }
-    free(hotkeyActions);
+  MSG msg;
+  while (GetMessage(&msg, NULL, 0, 0)) {
+    TranslateMessage(&msg);
+    DispatchMessage(&msg);
+  }
 
-    RemoveTrayIcon(g_hWnd);
-    return 0;
+  for (int i = 0; i < numHotkeys; i++) {
+    UnregisterHotKey(g_hWnd, i + 1);
+    free(hotkeyActions[i].action);
+  }
+  free(hotkeyActions);
+
+  RemoveTrayIcon(g_hWnd);
+  return 0;
 }
 
-void extractCmdAndParameter(const MCHAR *action, MCHAR *cmd, MCHAR *parameter)
-{
-    memset(cmd, 0, MAX_BUFF);
-    memset(parameter, 0, MAX_BUFF);
-    cmd[0] = action[0];
-    MCHAR stopChar = ' ';
-    if ('"' == action[0])
-    {
-        stopChar = '"';
-    }
-    size_t i = 1;
-    for (; action[i] != '\0' && action[i] != stopChar; i++)
-    {
-        cmd[i] = action[i];
-    }
-    if ('"' == stopChar)
-    {
-        cmd[i] = action[i];
-        i++;
-    }
-    my_strcat(parameter, MAX_BUFF, action + i);
+void extractCmdAndParameter(const MCHAR *action, MCHAR *cmd, MCHAR *parameter) {
+  memset(cmd, 0, MAX_BUFF);
+  memset(parameter, 0, MAX_BUFF);
+  cmd[0] = action[0];
+  MCHAR stopChar = '"' == action[0] ? '"' : ' ';
+
+  size_t i = 1;
+  for (; action[i] != '\0' && action[i] != stopChar; i++) {
+    cmd[i] = action[i];
+  }
+  if ('"' == stopChar) {
+    cmd[i] = action[i];
+    i++;
+  }
+  my_strcat(parameter, MAX_BUFF, action + i);
 }
 
-LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    switch (message)
-    {
-    case WM_USER + 1:
-        if (lParam == WM_LBUTTONDBLCLK)
-        {
-            PostQuitMessage(0);
+LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+  int index = wParam - 1;
+  switch (message) {
+  case WM_USER + 1:
+    if (lParam == WM_LBUTTONDBLCLK) {
+      PostQuitMessage(0);
+    }
+    break;
+  case WM_HOTKEY:
+    if (index >=0 && index < numHotkeys) {
+      if (my_stricmp(hotkeyActions[index].action, U("Minimize")) == 0) {
+        ShowWindow(GetForegroundWindow(), SW_MINIMIZE);
+      } else if (my_stricmp(hotkeyActions[index].action, U("Close")) == 0) {
+        SendMessage(GetForegroundWindow(), WM_CLOSE, 0, 0);
+      } else if (my_stricmp(hotkeyActions[index].action, U("Hide")) == 0) {
+        HWND hwndActive = GetForegroundWindow();
+        if (push(&stack, hwndActive)) {
+          ShowWindow(hwndActive, SW_HIDE);
         }
-        break;
-    case WM_HOTKEY:
-        for (int i = 0; i < numHotkeys; i++)
-        {
-            if (wParam == i + 1)
-            {
-                if (my_stricmp(hotkeyActions[i].action, U("Minimize")) == 0)
-                {
-                    ShowWindow(GetForegroundWindow(), SW_MINIMIZE);
-                }
-                else if (my_stricmp(hotkeyActions[i].action, U("Close")) == 0)
-                {
-                    SendMessage(GetForegroundWindow(), WM_CLOSE, 0, 0);
-                }
-                else if (my_stricmp(hotkeyActions[i].action, U("OnTop")) == 0)
-                {
-                    ToggleTopmost(GetForegroundWindow());
-                }
-                else
-                {
-                    MCHAR cmd[MAX_BUFF] = {0};
-                    MCHAR parameter[MAX_BUFF] = {0};
-                    extractCmdAndParameter(hotkeyActions[i].action, cmd, parameter);
-                    ShellExecute(NULL, U("open"), cmd, parameter, NULL, SW_SHOWNORMAL);
-                    EmptyWorkingSet(GetCurrentProcess());
-                }
-                break;
-            }
+      } else if (my_stricmp(hotkeyActions[index].action, U("Unhide")) == 0) {
+        HWND hwndLast = (HWND) pop(&stack);
+        if (hwndLast != NULL) {
+          ShowWindow(hwndLast, SW_SHOW);
+          SetForegroundWindow(hwndLast);
         }
-        break;
-    default:
-        return DefWindowProc(hWnd, message, wParam, lParam);
+      } else if (my_stricmp(hotkeyActions[index].action, U("Maximize")) == 0) {
+        ShowWindow(GetForegroundWindow(), SW_MAXIMIZE);
+      } else if (my_stricmp(hotkeyActions[index].action, U("OnTop")) == 0) {
+        ToggleTopmost(GetForegroundWindow());
+      } else {
+        MCHAR cmd[MAX_BUFF] = {0};
+        MCHAR parameter[MAX_BUFF] = {0};
+        extractCmdAndParameter(hotkeyActions[index].action, cmd, parameter);
+        OutputDebugString(cmd);
+        OutputDebugString(parameter);
+        ShellExecute(NULL, U("open"), cmd, parameter, NULL, SW_SHOWNORMAL);
+        EmptyWorkingSet(GetCurrentProcess());
+      }
     }
+    break;
+  default:
+    return DefWindowProc(hWnd, message, wParam, lParam);
+  }
 
-    return 0;
+  return 0;
 }
 
-void AddTrayIcon(HWND hWnd)
-{
-    NOTIFYICONDATA nid;
-    nid.cbSize = sizeof(NOTIFYICONDATA);
-    nid.hWnd = hWnd;
-    nid.uID = TRAY_ICON_ID;
-    nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
-    nid.uCallbackMessage = WM_USER + 1;
-    nid.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-    nid.uTimeout = 10 * 1000;
-    if (numHotkeys == 0)
-    {
-        my_strncpy(nid.szTip, sizeof(nid.szTip) / sizeof(nid.szTip[0]), U("Please edit config.txt, line format: \nkey=action"), _TRUNCATE);
-    }
-    else
-    {
-        my_snprintf(nid.szTip, sizeof(nid.szTip) / sizeof(nid.szTip[0]), U("Hotkey running with %d action(s)"), numHotkeys);
-    }
+void AddTrayIcon(HWND hWnd) {
+  NOTIFYICONDATA nid;
+  nid.cbSize = sizeof(NOTIFYICONDATA);
+  nid.hWnd = hWnd;
+  nid.uID = TRAY_ICON_ID;
+  nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+  nid.uCallbackMessage = WM_USER + 1;
+  nid.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+  nid.uTimeout = 10 * 1000;
+  if (numHotkeys == 0) {
+    my_strncpy(nid.szTip, sizeof(nid.szTip) / sizeof(nid.szTip[0]),
+               U("Please edit config.txt, line format: \nkey=action"), _TRUNCATE);
+  } else {
+    my_snprintf(nid.szTip, sizeof(nid.szTip) / sizeof(nid.szTip[0]),
+                U("Hotkey running with %d action(s)"), numHotkeys);
+  }
 #ifdef UNICODE
-    my_strcat(nid.szTip, sizeof(nid.szTip) / sizeof(nid.szTip[0]), L"\nHotkey v1.0(Unicode)");
+  my_strcat(nid.szTip, sizeof(nid.szTip) / sizeof(nid.szTip[0]), L"\nHotkey v1.0(Unicode)");
 #else
-    my_strcat(nid.szTip, sizeof(nid.szTip) / sizeof(nid.szTip[0]), "\nHotkey v1.0");
+  my_strcat(nid.szTip, sizeof(nid.szTip) / sizeof(nid.szTip[0]), "\nHotkey v1.0");
 #endif
 
-    if (g_ballonInfo[0] != '\0')
-    {
-        nid.uFlags |= NIF_INFO;
-        nid.dwInfoFlags = NIIF_INFO;
-        my_strncpy(nid.szInfoTitle, sizeof(nid.szInfoTitle) / sizeof(nid.szInfoTitle[0]), U("Failed hot keys"), _TRUNCATE);
-        my_strncpy(nid.szInfo, sizeof(nid.szInfo) / sizeof(nid.szInfo[0]), g_ballonInfo, _TRUNCATE);
-    }
+  if (g_ballonInfo[0] != '\0') {
+    nid.uFlags |= NIF_INFO;
+    nid.dwInfoFlags = NIIF_INFO;
+    my_strncpy(nid.szInfoTitle, sizeof(nid.szInfoTitle) / sizeof(nid.szInfoTitle[0]),
+               U("Failed hot keys"), _TRUNCATE);
+    my_strncpy(nid.szInfo, sizeof(nid.szInfo) / sizeof(nid.szInfo[0]), g_ballonInfo, _TRUNCATE);
+  }
 
-    Shell_NotifyIcon(NIM_ADD, &nid);
+  Shell_NotifyIcon(NIM_ADD, &nid);
 }
 
-void RemoveTrayIcon(HWND hWnd)
-{
-    NOTIFYICONDATA nid;
-    nid.cbSize = sizeof(NOTIFYICONDATA);
-    nid.hWnd = hWnd;
-    nid.uID = TRAY_ICON_ID;
-    Shell_NotifyIcon(NIM_DELETE, &nid);
+void RemoveTrayIcon(HWND hWnd) {
+  NOTIFYICONDATA nid;
+  nid.cbSize = sizeof(NOTIFYICONDATA);
+  nid.hWnd = hWnd;
+  nid.uID = TRAY_ICON_ID;
+  Shell_NotifyIcon(NIM_DELETE, &nid);
 }
 
-typedef struct
-{
-    const MCHAR *keyName;
-    UINT keyCode;
+typedef struct {
+  const MCHAR *keyName;
+  UINT keyCode;
 } KeyMapping;
 
 KeyMapping keyMappings[] = {
@@ -320,92 +346,74 @@ KeyMapping keyMappings[] = {
     {U("Tab"), VK_TAB},
 };
 
-UINT GetKeyCodeFromMapping(const MCHAR *keyName)
-{
-    for (size_t i = 0; i < sizeof(keyMappings) / sizeof(keyMappings[0]); i++)
-    {
-        if (my_stricmp(keyMappings[i].keyName, keyName) == 0)
-        {
-            return keyMappings[i].keyCode;
-        }
+UINT GetKeyCodeFromMapping(const MCHAR *keyName) {
+  for (size_t i = 0; i < sizeof(keyMappings) / sizeof(keyMappings[0]); i++) {
+    if (my_stricmp(keyMappings[i].keyName, keyName) == 0) {
+      return keyMappings[i].keyCode;
     }
-    return VkKeyScan(*keyName);
+  }
+  return VkKeyScan(*keyName);
 }
 
-void LoadConfig()
-{
-    FILE *fp = my_fopen(U("config.txt"), U("r"));
-    if (fp == NULL)
-    {
-        return;
+void LoadConfig() {
+  FILE *fp = my_fopen(U("config.txt"), U("r"));
+  if (fp == NULL) {
+    return;
+  }
+
+  MCHAR line[MAX_BUFF];
+  MCHAR hotkeyStr[32];
+  MCHAR action[MAX_BUFF - 32];
+  // while (my_fgets(line, sizeof(line), fp) != NULL) {
+  while (fgetws(line, sizeof(line), fp) != NULL) {
+    MCHAR *p = line;
+    while ((p < line + sizeof(line) - 1) && (*p == ' ' || *p == '\t')) {
+      p++;
+    }
+    if (*p == '#') {
+      continue;
     }
 
-    MCHAR line[MAX_BUFF];
-    MCHAR hotkeyStr[32];
-    MCHAR action[MAX_BUFF - 32];
-    while (my_fgets(line, sizeof(line), fp) != NULL)
-    {
-        MCHAR *p = line;
-        while ((p < line + sizeof(line) - 1) && (*p == ' ' || *p == '\t'))
-        {
-            p++;
-        }
-        if (*p == '#')
-        {
-            continue;
-        }
-
-        if (my_sscanf(line, U("%[^=]=%[^\n]"), hotkeyStr, action) != 2)
-        {
-            continue;
-        }
-
-        UINT modifier = 0;
-        UINT key = 0;
-        MCHAR *token;
-        MCHAR *nextToken;
-        token = my_strtok(hotkeyStr, U("+"), &nextToken);
-        while (token != NULL)
-        {
-            if (my_stricmp(token, U("ctrl")) == 0)
-            {
-                modifier |= MOD_CONTROL;
-            }
-            else if (my_stricmp(token, U("alt")) == 0)
-            {
-                modifier |= MOD_ALT;
-            }
-            else if (my_stricmp(token, U("shift")) == 0)
-            {
-                modifier |= MOD_SHIFT;
-            }
-            else if (_stricmp(token, U("win")) == 0)
-            {
-                modifier |= MOD_WIN;
-            }
-            else
-            {
-                key = GetKeyCodeFromMapping(token);
-            }
-            token = my_strtok(NULL, U("+"), &nextToken);
-        }
-
-        HotkeyAction newHotkey;
-        newHotkey.modifier = modifier;
-        newHotkey.key = key;
-        size_t actionLength = my_strlen(action);
-        newHotkey.action = (MCHAR *)malloc((actionLength + 1) * sizeof(MCHAR));
-        my_strncpy(newHotkey.action, actionLength + 1, action, actionLength);
-
-        hotkeyActions = realloc(hotkeyActions, (numHotkeys + 1) * sizeof(HotkeyAction));
-        hotkeyActions[numHotkeys++] = newHotkey;
-
-        if (!RegisterHotKey(g_hWnd, numHotkeys, modifier, key))
-        {
-            my_sscanf(line, U("%[^=]=%[^\n]"), hotkeyStr, action);
-            my_strcat(g_ballonInfo, sizeof(g_ballonInfo), line);
-        }
+    if (my_sscanf(line, U("%[^=]=%[^\n]"), hotkeyStr, action) != 2) {
+      continue;
     }
 
-    fclose(fp);
+    UINT modifier = 0;
+    UINT key = 0;
+    MCHAR *token;
+    MCHAR *nextToken;
+    token = my_strtok(hotkeyStr, U("+"), &nextToken);
+    while (token != NULL) {
+      if (my_stricmp(token, U("ctrl")) == 0) {
+        modifier |= MOD_CONTROL;
+      } else if (my_stricmp(token, U("alt")) == 0) {
+        modifier |= MOD_ALT;
+      } else if (my_stricmp(token, U("shift")) == 0) {
+        modifier |= MOD_SHIFT;
+      } else if (_stricmp(token, U("win")) == 0) {
+        modifier |= MOD_WIN;
+      } else {
+        key = GetKeyCodeFromMapping(token);
+      }
+      token = my_strtok(NULL, U("+"), &nextToken);
+    }
+
+    HotkeyAction newHotkey;
+    newHotkey.modifier = modifier;
+    newHotkey.key = key;
+    size_t actionLength = my_strlen(action);
+    newHotkey.action = (MCHAR *)malloc((actionLength + 1) * sizeof(MCHAR));
+    my_strncpy(newHotkey.action, actionLength + 1, action, actionLength);
+    OutputDebugString(line);
+
+    hotkeyActions = realloc(hotkeyActions, (numHotkeys + 1) * sizeof(HotkeyAction));
+    hotkeyActions[numHotkeys++] = newHotkey;
+
+    if (!RegisterHotKey(g_hWnd, numHotkeys, modifier, key)) {
+      my_sscanf(line, U("%[^=]=%[^\n]"), hotkeyStr, action);
+      my_strcat(g_ballonInfo, sizeof(g_ballonInfo), line);
+    }
+  }
+
+  fclose(fp);
 }
