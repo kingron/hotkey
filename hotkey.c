@@ -340,7 +340,7 @@ void doHotKey(int index) {
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
   switch (message) {
   case WM_SIZE:
-    SetWindowPos(g_hwndEdit, NULL, 2, 2, LOWORD(lParam - 4), HIWORD(lParam - 4), SWP_NOZORDER);
+    SetWindowPos(g_hwndEdit, NULL, 0, 0, LOWORD(lParam), HIWORD(lParam), SWP_NOZORDER);
     break;
   case WM_CLOSE:
     ShowWindow(hWnd, SW_HIDE);
