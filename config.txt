@@ -1,4 +1,6 @@
 # Hotkey configuration
+# For unicode version, the config.txt MUST be UTF-8 file encoding
+# Otherwise, should using ASCII file encoding
 # Note: + and = can't not set as hotkey
 
 # Special keys
@@ -12,45 +14,57 @@
 # OnTop = Switch TopMost for active window
 # Close = Close active window
 # Minimize = Minimize active window
-
+# Hide = Push and hide active window
+# Unhide = Pop and show last hide window
+# Maximize = Maximize active window
 # Minimize active window
-win+`=Minimize
+# Text = Input text to caret
+# Reload = Restart this application
 
-# win+a=Open system notification
+# 摸鱼专用
+win+`=Hide
+alt+`=Unhide
+win+F2=notepad config.txt
+win+F3=Reload
+win+F4=Text Hello,\n\tworld，测试专用
+win+ctrl+tab=Text \t
+win+n=notepad.exe
+win+z=OnTop
+alt+win+c=control panel
+win+q=Close
+ctrl+win+a="C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+
+# Windows Reserved Hotkeys
+# win+a=Open Action Center
 # win+b=Jump to system tray
-win+c=cmd.exe
+# win+c=Cortana
 # win+d=Show desktop
 # win+e=Open explorer
-win+f=notepad config.txt
+# win+f=Windows search
 # win+g=Open game bar
-win+h=https://www.bing.com
+# win+h=Open share window
 # win+i=Open system settings
-win+j=
-# win+k=Open device link
+# win+j=
+# win+k=Open device connect window
 # win+l=Lock computer
 # win+m=Minimize all windows
-win+n=notepad.exe
-win+o=
+# win+o=Lock screen rotation
 # win+p=Open screen project
-
-# Close active window
-win+q=Close
-
+# win+q=Open quick search
 # win+r=Open run dialog
-win+s=
-# win+t=Open task bar button
+# win+s=Open searc bar
+# win+t=Switch task application in task bar
 # win+u=Open display settings
-# win+v=Open multi-clipboard
-# win+w=Open input pen
+# win+v=Open clipboard history
+# win+w=Open windows Ink workspace
 # win+x=Open mobility center
-win+y=
+# win+y=Open Xbox Game Bar plugin
 
 # Switch TopMost active window
-win+z=OnTop
-
+# win+Escape=Quit windows zoom
+# win+-=Zoom out
+# win++=Zoom in
 # win+1~0=Open the 1~10 application which pinned in task bar
-win+-=
-win+Backspace=
 
 ctrl+win+a=
 ctrl+win+b=
@@ -68,9 +82,9 @@ ctrl+win+m=
 ctrl+win+n=
 ctrl+win+o=
 ctrl+win+p=
-ctrl+win+q=
+# ctrl+win+q=Qick assistence
 ctrl+win+r=
-ctrl+win+s=
+# ctrl+win+s=Open voice input settings
 ctrl+win+t=
 ctrl+win+u=
 ctrl+win+v=
@@ -81,7 +95,6 @@ ctrl+win+z=
 
 alt+win+a=
 alt+win+b=
-alt+win+c=
 alt+win+d=
 alt+win+e=
 alt+win+f=
@@ -100,7 +113,7 @@ alt+win+r=
 alt+win+s=
 alt+win+t=
 alt+win+u=
-alt+win+v=
+alt+win+v=rundll32.exe sysdm.cpl,EditEnvironmentVariables
 alt+win+w=
 alt+win+x=
 alt+win+y=
