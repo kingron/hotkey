@@ -80,6 +80,7 @@ typedef struct _NOTIFYICONDATA {
 } NOTIFYICONDATA, *PNOTIFYICONDATA;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK EditProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 void AddTrayIcon(HWND hWnd);
 void RemoveTrayIcon(HWND hWnd);
 void LoadConfig();
@@ -91,7 +92,7 @@ int g_argc;
 HWND g_hWnd;
 HWND g_hwndEdit;
 HANDLE hMutex;
-MCHAR g_ballonInfo[256] = {0};
+MCHAR *g_ballonInfo;
 Stack stack;
 
 #define _TRUNCATE ((size_t)-1)
@@ -189,6 +190,8 @@ void createWindow() {
   g_hwndEdit = CreateWindowEx(WS_EX_CLIENTEDGE, U("EDIT"), NULL,
                               WS_CHILD | WS_VISIBLE | ES_READONLY | ES_MULTILINE | WS_VSCROLL | ES_AUTOVSCROLL | WS_HSCROLL | ES_AUTOHSCROLL,
                               0, 0, 600, 300, g_hWnd, (HMENU) 100, (HINSTANCE) GetWindowLongPtr(g_hWnd, GWLP_HINSTANCE), NULL);
+  SetWindowLongPtr(g_hwndEdit, GWLP_USERDATA, (LONG_PTR)GetWindowLongPtr(g_hwndEdit, GWLP_WNDPROC));
+  SetWindowLongPtr(g_hwndEdit, GWLP_WNDPROC, (LONG_PTR)EditProc);
   RECT desktopRect;
   SystemParametersInfo(SPI_GETWORKAREA, 0, &desktopRect, 0);
   int desktopWidth = desktopRect.right - desktopRect.left;
@@ -209,6 +212,8 @@ int main(int argc, char *argv[])
     return 0;
   }
 
+  g_ballonInfo = (MCHAR *) malloc(256 * sizeof(MCHAR));
+  g_ballonInfo[0] = '\0';
   g_argv = argv;
   g_argc = argc;
   init(&stack);
@@ -344,10 +349,14 @@ void doHotKey(int index) {
   } else if (my_stricmp(hotkeyActions[index].action, U("Maximize")) == 0) {
     ShowWindow(GetForegroundWindow(), SW_MAXIMIZE);
   } else if (my_stricmp(hotkeyActions[index].action, U("Reload")) == 0) {
-    CloseHandle(hMutex);
-    RemoveTrayIcon(g_hWnd);
-    ShellExecute(NULL, U("open"), g_argv[0], g_argv[1], NULL, SW_SHOWDEFAULT);
-    exit(0);
+    if (isEmpty(&stack)) {
+      CloseHandle(hMutex);
+      RemoveTrayIcon(g_hWnd);
+      ShellExecute(NULL, U("open"), g_argv[0], g_argv[1], NULL, SW_SHOWDEFAULT);
+      exit(0);
+    } else {
+      MessageBox(GetForegroundWindow(), U("Please unhide all windows first."), "Warning", MB_OK | MB_ICONASTERISK | MB_TOPMOST);
+    }
   } else if (my_strnicmp(hotkeyActions[index].action, U("Text "), 5) == 0) {
     SendText(hotkeyActions[index].action + 5);
   } else if (my_stricmp(hotkeyActions[index].action, U("OnTop")) == 0) {
@@ -361,8 +370,28 @@ void doHotKey(int index) {
   }
 }
 
+LRESULT CALLBACK EditProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+  switch (message) {
+  case WM_KEYDOWN:
+    if (wParam == VK_ESCAPE) {
+      ShowWindow(g_hWnd, SW_HIDE);
+    } if (wParam == 'C' && GetKeyState(VK_CONTROL) < 0) {
+      SendMessage(hWnd, WM_COPY, 0, 0);
+    } if (wParam == 'A' && GetKeyState(VK_CONTROL) < 0) {
+      SendMessage(hWnd, EM_SETSEL, 0, -1);
+    }
+    break;
+  default:
+    break;
+  }
+  return CallWindowProc((WNDPROC)GetWindowLongPtr(hWnd, GWLP_USERDATA), hWnd, message, wParam, lParam);
+}
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
   switch (message) {
+  case WM_SETFOCUS:
+    SetFocus(g_hwndEdit);
+    break;
   case WM_SIZE:
     SetWindowPos(g_hwndEdit, NULL, 0, 0, LOWORD(lParam), HIWORD(lParam), SWP_NOZORDER);
     break;
@@ -371,7 +400,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
     break;
   case WM_USER + 1:
     if (lParam == WM_RBUTTONUP) {
-      PostQuitMessage(0);
+      if (isEmpty(&stack)) {
+        PostQuitMessage(0);
+      } else {
+        MessageBox(hWnd, U("Please unhide all windows first."), "Warning", MB_OK | MB_ICONASTERISK | MB_TOPMOST);
+      }
     } else if (lParam == WM_LBUTTONDOWN) {
       if (IsWindowVisible(hWnd)) {
         ShowWindow(hWnd, SW_HIDE);
@@ -418,6 +451,7 @@ void AddTrayIcon(HWND hWnd) {
                U("Failed hot keys"), _TRUNCATE);
     my_strncpy(nid.szInfo, sizeof(nid.szInfo) / sizeof(nid.szInfo[0]), g_ballonInfo, _TRUNCATE);
   }
+  free(g_ballonInfo);
 
   Shell_NotifyIcon(NIM_ADD, &nid);
 }
@@ -554,11 +588,12 @@ void LoadConfig() {
     hotkeyActions[numHotkeys++] = newHotkey;
 
     my_sscanf(line, U("%[^=]=%[^\n]"), hotkeyStr, action);
-    if (!RegisterHotKey(g_hWnd, numHotkeys, modifier, key)) {
-      my_strcat(g_ballonInfo, sizeof(g_ballonInfo), line);
+    if (RegisterHotKey(g_hWnd, numHotkeys, modifier, key)) {
+      my_snprintf(line, MAX_BUFF, U("  %s=%s\r\n"), hotkeyStr, action);
+    } else {
+      my_strcat(g_ballonInfo, 256, line);
+      my_snprintf(line, MAX_BUFF, U("× %s=%s\r\n"), hotkeyStr, action);
     }
-
-    my_snprintf(line, MAX_BUFF, U("%s=%s\r\n"), hotkeyStr, action);
     appendText(g_hwndEdit, line);
   }
 

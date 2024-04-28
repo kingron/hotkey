@@ -31,6 +31,8 @@ win+ctrl+tab=Text \t
 win+n=notepad.exe
 win+z=OnTop
 alt+win+c=control panel
+alt+win+s=services.msc
+alt+win+m=compmgmt.msc
 win+q=Close
 ctrl+win+a="C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 
