@@ -85,6 +85,7 @@ void RemoveTrayIcon(HWND hWnd);
 void LoadConfig();
 void ToggleTopmost(HWND hWnd);
 
+MCHAR g_version[32] = U("Hotkey v0.6");
 MCHAR **g_argv;
 int g_argc;
 HWND g_hWnd;
@@ -211,6 +212,14 @@ int main(int argc, char *argv[])
   g_argv = argv;
   g_argc = argc;
   init(&stack);
+  if (sizeof(void*) == 8) {
+    my_strcat(g_version, sizeof(g_version) / sizeof(g_version[0]), U(" - x64"));
+  } else {
+    my_strcat(g_version, sizeof(g_version) / sizeof(g_version[0]), U(" - x86"));
+  }
+#ifdef UNICODE
+  my_strcat(g_version, sizeof(g_version) / sizeof(g_version[0]), U("(Unicode)"));
+#endif
 
   createWindow();
   LoadConfig();
@@ -399,11 +408,8 @@ void AddTrayIcon(HWND hWnd) {
     my_snprintf(nid.szTip, sizeof(nid.szTip) / sizeof(nid.szTip[0]),
                 U("Hotkey running with %d action(s)"), numHotkeys);
   }
-#ifdef UNICODE
-  my_strcat(nid.szTip, sizeof(nid.szTip) / sizeof(nid.szTip[0]), L"\nHotkey v1.0(Unicode)");
-#else
-  my_strcat(nid.szTip, sizeof(nid.szTip) / sizeof(nid.szTip[0]), "\nHotkey v1.0");
-#endif
+  my_strcat(nid.szTip, sizeof(nid.szTip) / sizeof(nid.szTip[0]), U("\r\n"));
+  my_strcat(nid.szTip, sizeof(nid.szTip) / sizeof(nid.szTip[0]), g_version);
 
   if (g_ballonInfo[0] != '\0') {
     nid.uFlags |= NIF_INFO;
