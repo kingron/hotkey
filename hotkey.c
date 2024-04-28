@@ -5,10 +5,15 @@
 #pragma comment(lib, "shell32")
 #pragma comment(lib, "psapi")
 #pragma comment(lib, "gdi32")
+#pragma comment(lib, "shlwapi")
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <windows.h>
+
+#define LWSTDAPI_(type) EXTERN_C DECLSPEC_IMPORT type WINAPI
+LWSTDAPI_(WINBOOL) StrTrimA(LPSTR psz,LPCSTR pszTrimChars);
+LWSTDAPI_(WINBOOL) StrTrimW(LPWSTR psz,LPCWSTR pszTrimChars);
 
 #ifdef UNICODE
 #define U(x) L##x
@@ -26,6 +31,7 @@
 #define ShellExecute ShellExecuteW
 #define Debug(x) OutputDebugStringW(L##x)
 #define DebugV(x) OutputDebugStringW(x)
+#define StrTrim StrTrimW
 #else
 #define U(x) x
 #define MCHAR char
@@ -42,6 +48,7 @@
 #define ShellExecute ShellExecuteA
 #define Debug(x) OutputDebugStringA(x)
 #define DebugV(x) OutputDebugStringA(x)
+#define StrTrim StrTrimA
 #endif
 
 #define MAX_STACK_SIZE 10
@@ -116,7 +123,6 @@ BOOLEAN push(Stack* stack, void* item) {
     stack->items[stack->top] = item;
     return TRUE;
   } else {
-    MessageBox(GetForegroundWindow(), U("Too many hide windows"), U("Error"), MB_ICONERROR | MB_OK);
     return FALSE;
   }
 }
@@ -127,7 +133,6 @@ void* pop(Stack* stack) {
     stack->top--;
     return item;
   } else {
-    MessageBox(GetForegroundWindow(), U("No hidden window"), U("Error"), MB_ICONERROR | MB_OK);
     return NULL;
   }
 }
@@ -159,14 +164,14 @@ void SetDefaultFont(HWND hWnd)
     ReleaseDC(hWnd, hdc);
 
     memset(&lf, 0, sizeof(LOGFONT));
-    lf.lfHeight = -MulDiv(10, dpiY, 72); // 14 像素转换为设备单位
+    lf.lfHeight = -MulDiv(10, dpiY, 72);
     lf.lfWeight = FW_NORMAL;
     lf.lfCharSet = DEFAULT_CHARSET;
     lf.lfOutPrecision = OUT_DEFAULT_PRECIS;
     lf.lfClipPrecision = CLIP_DEFAULT_PRECIS;
     lf.lfQuality = DEFAULT_QUALITY;
     lf.lfPitchAndFamily = DEFAULT_PITCH | FF_DONTCARE;
-    my_strncpy(lf.lfFaceName, sizeof(lf.lfFaceName), U("Cascadia Code"), _TRUNCATE); // 字体名称
+    my_strncpy(lf.lfFaceName, sizeof(lf.lfFaceName), U("Cascadia Code"), _TRUNCATE);
 
     hFont = CreateFontIndirect(&lf);
     SendMessage(hWnd, WM_SETFONT, (WPARAM)hFont, TRUE);
@@ -308,15 +313,25 @@ void doHotKey(int index) {
     SendMessage(GetForegroundWindow(), WM_CLOSE, 0, 0);
   } else if (my_stricmp(hotkeyActions[index].action, U("Hide")) == 0) {
     HWND hwndActive = GetForegroundWindow();
-    if (push(&stack, hwndActive)) {
-      ShowWindow(hwndActive, SW_HIDE);
+    if (isFull(&stack)) {
+      MessageBox(GetForegroundWindow(), U("Too many hide windows"), 
+                 U("Error"), MB_ICONERROR | MB_OK | MB_TOPMOST);
+      return;
+    }
+
+    if (ShowWindow(hwndActive, SW_HIDE)) {
+      push(&stack, hwndActive);
     }
   } else if (my_stricmp(hotkeyActions[index].action, U("Unhide")) == 0) {
     HWND hwndLast = (HWND) pop(&stack);
-    if (hwndLast != NULL) {
-      ShowWindow(hwndLast, SW_SHOW);
-      SetForegroundWindow(hwndLast);
+    if (hwndLast == NULL) {
+      MessageBox(GetForegroundWindow(), U("No hidden window"), 
+                 U("Error"), MB_ICONERROR | MB_OK | MB_TOPMOST);
+      return;
     }
+
+    ShowWindow(hwndLast, SW_SHOW);
+    SetForegroundWindow(hwndLast);
   } else if (my_stricmp(hotkeyActions[index].action, U("Maximize")) == 0) {
     ShowWindow(GetForegroundWindow(), SW_MAXIMIZE);
   } else if (my_stricmp(hotkeyActions[index].action, U("Reload")) == 0) {
@@ -500,13 +515,14 @@ void LoadConfig() {
       continue;
     }
 
-    DebugV(line);
+    // DebugV(line);
     UINT modifier = 0;
     UINT key = 0;
     MCHAR *token;
     MCHAR *nextToken;
     token = (MCHAR*) my_strtok(hotkeyStr, U("+"), &nextToken);
     while (token != NULL) {
+      StrTrim(token, U(" \r\t\n"));
       if (my_stricmp(token, U("ctrl")) == 0) {
         modifier |= MOD_CONTROL;
       } else if (my_stricmp(token, U("alt")) == 0) {
