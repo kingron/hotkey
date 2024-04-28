@@ -184,7 +184,7 @@ void createWindow() {
     exit(1);
   }
 
-  SetWindowLong(g_hWnd, GWLP_WNDPROC, (LONG_PTR)WndProc);
+  SetWindowLongPtr(g_hWnd, GWLP_WNDPROC, (LONG_PTR)WndProc);
   g_hwndEdit = CreateWindowEx(WS_EX_CLIENTEDGE, U("EDIT"), NULL,
                               WS_CHILD | WS_VISIBLE | ES_READONLY | ES_MULTILINE | WS_VSCROLL | ES_AUTOVSCROLL | WS_HSCROLL | ES_AUTOHSCROLL,
                               0, 0, 600, 300, g_hWnd, (HMENU) 100, (HINSTANCE) GetWindowLongPtr(g_hWnd, GWLP_HINSTANCE), NULL);
