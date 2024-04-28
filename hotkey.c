@@ -6,10 +6,12 @@
 #pragma comment(lib, "psapi")
 #pragma comment(lib, "gdi32")
 #pragma comment(lib, "shlwapi")
+#pragma comment(lib, "kernel32")
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <windows.h>
+// #include <tlhelp32.h>
 
 #define LWSTDAPI_(type) EXTERN_C DECLSPEC_IMPORT type WINAPI
 LWSTDAPI_(WINBOOL) StrTrimA(LPSTR psz,LPCSTR pszTrimChars);
@@ -106,6 +108,20 @@ Stack stack;
 #define NIIF_INFO 0x00000001
 #define NIM_ADD 0x00000000
 #define NIM_DELETE 0x00000002
+
+#define TH32CS_SNAPPROCESS 0x00000002
+typedef struct tagPROCESSENTRY32 {
+  DWORD dwSize;
+  DWORD cntUsage;
+  DWORD th32ProcessID;
+  ULONG_PTR th32DefaultHeapID;
+  DWORD th32ModuleID;
+  DWORD cntThreads;
+  DWORD th32ParentProcessID;
+  LONG pcPriClassBase;
+  DWORD dwFlags;
+  MCHAR szExeFile[MAX_PATH];
+} PROCESSENTRY32;
 
 void init(Stack* stack) {
   stack->top = -1;
@@ -384,6 +400,61 @@ void doKeys(MCHAR *keys) {
   }
 }
 
+MCHAR* strcasestr(const MCHAR* target, const MCHAR* sub) {
+  if (*sub == '\0') {
+      return (MCHAR*) target;
+  }
+  while (*target != '\0') {
+    if (tolower(*target) == tolower(*sub)) {
+      const MCHAR* h = target;
+      const MCHAR* n = sub;
+      while (*n != '\0' && tolower(*h) == tolower(*n)) {
+        h++;
+        n++;
+      }
+      if (*n == '\0') {
+          return (MCHAR*) target;
+      }
+    }
+    target++;
+  }
+  return NULL;
+}
+
+DWORD GetProcessIdByName(const MCHAR* processName) {
+  DWORD pid = 0;
+  HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+  if (snapshot != INVALID_HANDLE_VALUE) {
+    PROCESSENTRY32 pe32;
+    pe32.dwSize = sizeof(PROCESSENTRY32);
+    if (Process32First(snapshot, &pe32)) {
+      do {
+        // if (my_stricmp(pe32.szExeFile, processName) == 0) {
+        if (strcasestr(processName, pe32.szExeFile) != NULL) {
+          pid = pe32.th32ProcessID;
+          break;
+        }
+      } while (Process32Next(snapshot, &pe32));
+    }
+    CloseHandle(snapshot);
+  }
+  return pid;
+}
+
+void ShowWindowByProcessId(DWORD pid) {
+  HWND hwnd = FindWindow(NULL, NULL);
+  while (hwnd) {
+    DWORD windowPid;
+    GetWindowThreadProcessId(hwnd, &windowPid);
+    if (windowPid == pid) {
+      ShowWindow(hwnd, SW_RESTORE);
+      SetForegroundWindow(hwnd);
+      break;
+    }
+    hwnd = FindWindowEx(NULL, hwnd, NULL, NULL);
+  }
+}
+
 void doHotKey(int index) {
   if (index < 0 || index >= numHotkeys) {
     return;
@@ -435,7 +506,14 @@ void doHotKey(int index) {
     MCHAR cmd[MAX_BUFF] = {0};
     MCHAR parameter[MAX_BUFF] = {0};
     extractCmdAndParameter(hotkeyActions[index].action, cmd, parameter);
-    ShellExecute(NULL, U("open"), cmd, parameter, NULL, SW_SHOWNORMAL);
+    DWORD pid = GetProcessIdByName(cmd);
+    DebugV(cmd);
+    if (pid) {
+      DebugV("PID found");
+      ShowWindowByProcessId(pid);
+    } else {
+      ShellExecute(NULL, U("open"), cmd, parameter, NULL, SW_SHOWNORMAL);
+    }
     EmptyWorkingSet(GetCurrentProcess());
   }
 }

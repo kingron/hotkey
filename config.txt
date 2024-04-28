@@ -24,10 +24,11 @@
 # 摸鱼专用
 win+`=Hide
 alt+`=Unhide
-win+F2=notepad config.txt
+win+F2=notepad.exe config.txt
 win+F3=Reload
 win+F4=Text Hello,\n\tworld，测试专用
 win+F5=Keys ctrl+A,"Hello\nWorld", ctrl+Backspace,"测试", ctrl+s
+win+F12=dbgview.exe
 win+ctrl+tab=Text \t
 win+n=notepad.exe
 win+z=OnTop
@@ -35,7 +36,11 @@ alt+win+c=control panel
 alt+win+s=services.msc
 alt+win+m=compmgmt.msc
 win+q=Close
+win+alt+h=notepad.exe C:\windows\system32\drivers\etc\hosts
 ctrl+win+a="C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+ctrl+win+c=calc.exe
+ctrl+win+d=cleanmgr.exe
+ctrl+win+i=rundll32.exe AppXDeploymentExtensions.OneCore.dll,ShellRefresh
 
 # Windows Reserved Hotkeys
 # win+a=Open Action Center
