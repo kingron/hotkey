@@ -147,6 +147,7 @@ typedef struct {
 
 HotkeyAction *hotkeyActions = NULL;
 int numHotkeys = 0;
+void parseHotkey(HotkeyAction *keyAction, MCHAR* hotkeyStr);
 
 void ToggleTopmost(HWND hWnd) {
   LONG_PTR exStyle = GetWindowLong(hWnd, GWL_EXSTYLE);
@@ -316,6 +317,73 @@ void SendText(const MCHAR* string) {
   }
 }
 
+void sendKeyEvent(WORD key, BOOL keyup)
+{
+    INPUT input = { 0 };
+    input.type = INPUT_KEYBOARD;
+    input.ki.wVk = key;
+    input.ki.dwFlags = keyup ? KEYEVENTF_KEYUP : 0;
+    SendInput(1, &input, sizeof(INPUT));
+}
+
+void SendKey(UINT key, UINT modifier) {
+  sendKeyEvent(VK_CONTROL, TRUE);
+  sendKeyEvent(VK_MENU, TRUE);
+  sendKeyEvent(VK_SHIFT, TRUE);
+  sendKeyEvent(VK_LWIN, TRUE);
+  sendKeyEvent(VK_RWIN, TRUE);
+
+  if (modifier & MOD_CONTROL) {
+    sendKeyEvent(VK_CONTROL, FALSE);
+  }
+  if (modifier & MOD_ALT) {
+    sendKeyEvent(VK_MENU, FALSE);
+  }
+  if (modifier & MOD_SHIFT) {
+    sendKeyEvent(VK_SHIFT, FALSE);
+  }
+  if (modifier & MOD_WIN) {
+    sendKeyEvent(VK_LWIN, FALSE);
+  }
+
+  sendKeyEvent(key, FALSE);
+  sendKeyEvent(key, TRUE);
+
+  if (modifier & MOD_CONTROL) {
+    sendKeyEvent(VK_CONTROL, TRUE);
+  }
+  if (modifier & MOD_ALT) {
+    sendKeyEvent(VK_MENU, TRUE);
+  }
+  if (modifier & MOD_SHIFT) {
+    sendKeyEvent(VK_SHIFT, TRUE);
+  }
+  if (modifier & MOD_WIN) {
+    sendKeyEvent(VK_LWIN, TRUE);
+  }
+}
+
+void doKeys(MCHAR *keys) {
+  MCHAR buf[MAX_BUFF] = {0};
+  my_strncpy(buf, MAX_BUFF, keys, _TRUNCATE);
+
+  MCHAR *token;
+  MCHAR *nextToken;
+  token = (MCHAR*) my_strtok(buf, U(","), &nextToken);
+  while (token != NULL) {
+    StrTrim(token, " \r\n\t");
+    if (token[0] == '"') {
+      StrTrim(token, "\"");
+      SendText(token);
+    } else {
+      HotkeyAction hotkey;
+      parseHotkey(&hotkey, token);
+      SendKey(hotkey.key, hotkey.modifier);
+    }
+    token = (MCHAR*) my_strtok(NULL, U(","), &nextToken);
+  }
+}
+
 void doHotKey(int index) {
   if (index < 0 || index >= numHotkeys) {
     return;
@@ -357,6 +425,8 @@ void doHotKey(int index) {
     } else {
       MessageBox(GetForegroundWindow(), U("Please unhide all windows first."), "Warning", MB_OK | MB_ICONASTERISK | MB_TOPMOST);
     }
+  } else if (my_strnicmp(hotkeyActions[index].action, U("Keys "), 5) == 0) {
+    doKeys(hotkeyActions[index].action + 5);
   } else if (my_strnicmp(hotkeyActions[index].action, U("Text "), 5) == 0) {
     SendText(hotkeyActions[index].action + 5);
   } else if (my_stricmp(hotkeyActions[index].action, U("OnTop")) == 0) {
@@ -525,8 +595,35 @@ UINT GetKeyCodeFromMapping(const MCHAR *keyName) {
     if (my_stricmp(keyMappings[i].keyName, keyName) == 0) {
       return keyMappings[i].keyCode;
     }
+  }  return VkKeyScan(*keyName);
+}
+
+void parseHotkey(HotkeyAction *keyAction, MCHAR* str)
+{
+  keyAction->modifier = 0;
+  keyAction->key = 0;
+
+  MCHAR hotkeyStr[32] = {0};
+  my_strncpy(hotkeyStr, 32, str, _TRUNCATE);
+
+  MCHAR *token;
+  MCHAR *nextToken;
+  token = (MCHAR*) my_strtok(hotkeyStr, U("+"), &nextToken);
+  while (token != NULL) {
+    StrTrim(token, U(" \r\t\n"));
+    if (my_stricmp(token, U("ctrl")) == 0) {
+      keyAction->modifier |= MOD_CONTROL;
+    } else if (my_stricmp(token, U("alt")) == 0) {
+      keyAction->modifier |= MOD_ALT;
+    } else if (my_stricmp(token, U("shift")) == 0) {
+      keyAction->modifier |= MOD_SHIFT;
+    } else if (my_stricmp(token, U("win")) == 0) {
+      keyAction->modifier |= MOD_WIN;
+    } else {
+      keyAction->key = GetKeyCodeFromMapping(token);
+    }
+    token = (MCHAR*) my_strtok(NULL, U("+"), &nextToken);
   }
-  return VkKeyScan(*keyName);
 }
 
 void LoadConfig() {
@@ -556,30 +653,9 @@ void LoadConfig() {
     }
 
     // DebugV(line);
-    UINT modifier = 0;
-    UINT key = 0;
-    MCHAR *token;
-    MCHAR *nextToken;
-    token = (MCHAR*) my_strtok(hotkeyStr, U("+"), &nextToken);
-    while (token != NULL) {
-      StrTrim(token, U(" \r\t\n"));
-      if (my_stricmp(token, U("ctrl")) == 0) {
-        modifier |= MOD_CONTROL;
-      } else if (my_stricmp(token, U("alt")) == 0) {
-        modifier |= MOD_ALT;
-      } else if (my_stricmp(token, U("shift")) == 0) {
-        modifier |= MOD_SHIFT;
-      } else if (my_stricmp(token, U("win")) == 0) {
-        modifier |= MOD_WIN;
-      } else {
-        key = GetKeyCodeFromMapping(token);
-      }
-      token = (MCHAR*) my_strtok(NULL, U("+"), &nextToken);
-    }
-
     HotkeyAction newHotkey;
-    newHotkey.modifier = modifier;
-    newHotkey.key = key;
+    parseHotkey(&newHotkey, hotkeyStr);
+
     size_t actionLength = my_strlen(action);
     newHotkey.action = (MCHAR *)malloc((actionLength + 1) * sizeof(MCHAR));
     my_strncpy(newHotkey.action, actionLength + 1, action, actionLength);
@@ -587,8 +663,7 @@ void LoadConfig() {
     hotkeyActions = realloc(hotkeyActions, (numHotkeys + 1) * sizeof(HotkeyAction));
     hotkeyActions[numHotkeys++] = newHotkey;
 
-    my_sscanf(line, U("%[^=]=%[^\n]"), hotkeyStr, action);
-    if (RegisterHotKey(g_hWnd, numHotkeys, modifier, key)) {
+    if (RegisterHotKey(g_hWnd, numHotkeys, newHotkey.modifier, newHotkey.key)) {
       my_snprintf(line, MAX_BUFF, U("  %s=%s\r\n"), hotkeyStr, action);
     } else {
       my_strcat(g_ballonInfo, 256, line);

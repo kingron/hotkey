@@ -27,6 +27,7 @@ alt+`=Unhide
 win+F2=notepad config.txt
 win+F3=Reload
 win+F4=Text Hello,\n\tworld，测试专用
+win+F5=Keys ctrl+A,"Hello\nWorld", ctrl+Backspace,"测试", ctrl+s
 win+ctrl+tab=Text \t
 win+n=notepad.exe
 win+z=OnTop
