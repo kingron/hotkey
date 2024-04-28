@@ -11,7 +11,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <windows.h>
-// #include <tlhelp32.h>
 
 #define LWSTDAPI_(type) EXTERN_C DECLSPEC_IMPORT type WINAPI
 LWSTDAPI_(WINBOOL) StrTrimA(LPSTR psz,LPCSTR pszTrimChars);
@@ -120,7 +119,7 @@ typedef struct tagPROCESSENTRY32 {
   DWORD th32ParentProcessID;
   LONG pcPriClassBase;
   DWORD dwFlags;
-  MCHAR szExeFile[MAX_PATH];
+  char szExeFile[MAX_PATH];
 } PROCESSENTRY32;
 
 void init(Stack* stack) {
@@ -429,8 +428,14 @@ DWORD GetProcessIdByName(const MCHAR* processName) {
     pe32.dwSize = sizeof(PROCESSENTRY32);
     if (Process32First(snapshot, &pe32)) {
       do {
-        // if (my_stricmp(pe32.szExeFile, processName) == 0) {
+        OutputDebugStringA(pe32.szExeFile);
+#ifdef UNICODE
+        MCHAR wszExeFile[MAX_PATH] = {0};
+        MultiByteToWideChar(65001, 0, pe32.szExeFile, -1, wszExeFile, MAX_PATH);
+        if (strcasestr(processName, wszExeFile) != NULL) {
+#else
         if (strcasestr(processName, pe32.szExeFile) != NULL) {
+#endif
           pid = pe32.th32ProcessID;
           break;
         }
