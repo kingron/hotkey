@@ -178,14 +178,8 @@ void ToggleTopmost(HWND hWnd) {
 
 void SetDefaultFont(HWND hWnd)
 {
-    LOGFONT lf;
-    HFONT hFont;
-    HDC hdc = GetDC(hWnd);
-    int dpiY = GetDeviceCaps(hdc, LOGPIXELSY);
-    ReleaseDC(hWnd, hdc);
-
-    memset(&lf, 0, sizeof(LOGFONT));
-    lf.lfHeight = -MulDiv(10, dpiY, 72);
+    LOGFONT lf = {0};
+    lf.lfHeight = -12;
     lf.lfWeight = FW_NORMAL;
     lf.lfCharSet = DEFAULT_CHARSET;
     lf.lfOutPrecision = OUT_DEFAULT_PRECIS;
@@ -194,7 +188,7 @@ void SetDefaultFont(HWND hWnd)
     lf.lfPitchAndFamily = DEFAULT_PITCH | FF_DONTCARE;
     my_strncpy(lf.lfFaceName, sizeof(lf.lfFaceName), U("Cascadia Code"), _TRUNCATE);
 
-    hFont = CreateFontIndirect(&lf);
+    HFONT hFont = CreateFontIndirect(&lf);
     SendMessage(hWnd, WM_SETFONT, (WPARAM)hFont, TRUE);
 }
 
@@ -301,8 +295,7 @@ void appendText(HWND hWndEdit, MCHAR* lpText) {
 }
 
 void extractCmdAndParameter(const MCHAR *action, MCHAR *cmd, MCHAR *parameter) {
-  memset(cmd, 0, MAX_BUFF);
-  memset(parameter, 0, MAX_BUFF);
+  parameter[0] = '\0';
   cmd[0] = action[0];
   MCHAR stopChar = '"' == action[0] ? '"' : ' ';
 
@@ -314,6 +307,7 @@ void extractCmdAndParameter(const MCHAR *action, MCHAR *cmd, MCHAR *parameter) {
     cmd[i] = action[i];
     i++;
   }
+  cmd[i] = '\0';
   my_strcat(parameter, MAX_BUFF, action + i);
 }
 
@@ -460,7 +454,7 @@ DWORD GetProcessIdByName(const MCHAR* processName) {
     pe32.dwSize = sizeof(PROCESSENTRY32);
     if (Process32First(snapshot, &pe32)) {
       do {
-        OutputDebugStringA(pe32.szExeFile);
+        // OutputDebugStringA(pe32.szExeFile);
 #ifdef UNICODE
         MCHAR wszExeFile[MAX_PATH] = {0};
         MultiByteToWideChar(65001, 0, pe32.szExeFile, -1, wszExeFile, MAX_PATH);
@@ -546,7 +540,7 @@ void doHotKey(int index) {
     MCHAR parameter[MAX_BUFF] = {0};
     extractCmdAndParameter(hotkeyActions[index].action, cmd, parameter);
     DWORD pid = GetProcessIdByName(cmd);
-    DebugV(cmd);
+
     if (pid) {
       DebugV("PID found");
       ShowWindowByProcessId(pid);
