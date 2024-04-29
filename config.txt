@@ -48,7 +48,13 @@ win+alt+h=notepad.exe C:\windows\system32\drivers\etc\hosts
 # View my IP Address
 ctrl+win+i=cmd /k ipconfig /all | find "IPv4 Address"
 
+# ----------------------------
 # Windows Reserved Hotkeys
+# ----------------------------
+# if you don't want to use default windows hot key, run below command to disable it.
+# For example, Don't use system default win+q, win+c, win+h, win+g, win+j, win+o, win+y, win+z, please run in cmd and logoff:
+#   reg add HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced /v DisabledHotkeys /d QCGHJOYZ
+
 # win+a=Open Action Center
 # win+b=Jump to system tray
 # win+c=Cortana

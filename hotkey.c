@@ -33,6 +33,7 @@ LWSTDAPI_(WINBOOL) StrTrimW(LPWSTR psz,LPCWSTR pszTrimChars);
 #define Debug(x) OutputDebugStringW(L##x)
 #define DebugV(x) OutputDebugStringW(x)
 #define StrTrim StrTrimW
+#define my_strrchr wcsrchr
 #else
 #define U(x) x
 #define MCHAR char
@@ -50,6 +51,7 @@ LWSTDAPI_(WINBOOL) StrTrimW(LPWSTR psz,LPCWSTR pszTrimChars);
 #define Debug(x) OutputDebugStringA(x)
 #define DebugV(x) OutputDebugStringA(x)
 #define StrTrim StrTrimA
+#define my_strrchr strrchr
 #endif
 
 #define MAX_STACK_SIZE 10
@@ -742,6 +744,14 @@ void parseHotkey(HotkeyAction *keyAction, MCHAR* str)
 }
 
 void LoadConfig() {
+  MCHAR appdir[MAX_PATH] = {0};
+  GetModuleFileName(NULL, appdir, MAX_PATH);
+  MCHAR *pos = my_strrchr(appdir, '\\');
+  if (pos != NULL) {
+    *pos = '\0';
+  }
+  SetCurrentDirectory(appdir);
+
 #ifdef UNICODE
   FILE *fp = _wfopen(L"config.txt", L"r, ccs=UTF-8");
 #else
