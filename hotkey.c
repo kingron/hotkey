@@ -542,7 +542,6 @@ void doHotKey(int index) {
     DWORD pid = GetProcessIdByName(cmd);
 
     if (pid) {
-      DebugV("PID found");
       ShowWindowByProcessId(pid);
     } else {
       ShellExecute(NULL, U("open"), cmd, parameter, NULL, SW_SHOWNORMAL);
