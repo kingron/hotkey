@@ -176,6 +176,10 @@ void ToggleTopmost(HWND hWnd) {
   }
 }
 
+void warnHideWindow() {
+  MessageBox(GetForegroundWindow, U("Please unhide all windows first."), U("Warning"), MB_OK | MB_ICONASTERISK | MB_TOPMOST);
+}
+
 void SetDefaultFont(HWND hWnd)
 {
     LOGFONT lf = {0};
@@ -525,7 +529,7 @@ void doHotKey(int index) {
       ShellExecute(NULL, U("open"), g_argv[0], g_argv[1], NULL, SW_SHOWDEFAULT);
       exit(0);
     } else {
-      MessageBox(GetForegroundWindow(), U("Please unhide all windows first."), "Warning", MB_OK | MB_ICONASTERISK | MB_TOPMOST);
+      warnHideWindow();
     }
   } else if (my_strnicmp(hotkeyActions[index].action, U("Keys "), 5) == 0) {
     doKeys(hotkeyActions[index].action + 5);
@@ -583,7 +587,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
       if (isEmpty(&stack)) {
         PostQuitMessage(0);
       } else {
-        MessageBox(hWnd, U("Please unhide all windows first."), "Warning", MB_OK | MB_ICONASTERISK | MB_TOPMOST);
+        warnHideWindow();
       }
     } else if (lParam == WM_LBUTTONDOWN) {
       if (IsWindowVisible(hWnd)) {
