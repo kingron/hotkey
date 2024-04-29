@@ -86,6 +86,7 @@ void AddTrayIcon(HWND hWnd);
 void RemoveTrayIcon(HWND hWnd);
 void LoadConfig();
 void ToggleTopmost(HWND hWnd);
+void SendKey(UINT key, UINT modifier);
 
 MCHAR g_version[32] = U("Hotkey v0.6");
 MCHAR **g_argv;
@@ -216,6 +217,33 @@ void createWindow() {
   SetDefaultFont(g_hwndEdit);
 }
 
+HHOOK g_hook = NULL;
+unsigned short g_mouseState = 0;
+LRESULT CALLBACK MouseProc(int nCode, WPARAM wParam, LPARAM lParam) {
+  if (nCode >= 0) {
+    if (nCode >= 0) {
+      if (WM_RBUTTONDOWN == wParam) {
+        g_mouseState |= 0x01;
+      } else if (WM_LBUTTONDOWN == wParam) {
+        if (g_mouseState == 0x01) {
+          g_mouseState |= 0x02;
+        }
+      } else if (WM_LBUTTONUP == wParam) {
+        if ((g_mouseState & 0x03) == 0x03) {
+            g_mouseState |= 0x04;
+        }
+      } else if (WM_RBUTTONUP == wParam) {
+        if ((g_mouseState & 0x07) == 0x07) {
+            SendKey('W', MOD_CONTROL);
+        }
+        g_mouseState = 0;
+      }
+    }
+  }
+
+  return CallNextHookEx(g_hook, nCode, wParam, lParam);
+}
+
 #ifdef UNICODE
 int wmain(int argc, MCHAR *argv[])
 #else
@@ -246,6 +274,7 @@ int main(int argc, char *argv[])
   LoadConfig();
   AddTrayIcon(g_hWnd);
   EmptyWorkingSet(GetCurrentProcess());
+  g_hook = SetWindowsHookEx(WH_MOUSE_LL, MouseProc, GetModuleHandle(NULL), 0);
 
   MSG msg;
   while (GetMessage(&msg, NULL, 0, 0)) {
@@ -253,6 +282,7 @@ int main(int argc, char *argv[])
     DispatchMessage(&msg);
   }
 
+  UnhookWindowsHookEx(g_hook);
   for (int i = 0; i < numHotkeys; i++) {
     UnregisterHotKey(g_hWnd, i + 1);
     free(hotkeyActions[i].action);
@@ -505,6 +535,8 @@ void doHotKey(int index) {
     doKeys(hotkeyActions[index].action + 5);
   } else if (my_strnicmp(hotkeyActions[index].action, U("Text "), 5) == 0) {
     SendText(hotkeyActions[index].action + 5);
+  } else if (my_stricmp(hotkeyActions[index].action, U("OnBottom")) == 0) {
+    SetWindowPos(GetForegroundWindow(), HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
   } else if (my_stricmp(hotkeyActions[index].action, U("OnTop")) == 0) {
     ToggleTopmost(GetForegroundWindow());
   } else {

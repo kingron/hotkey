@@ -10,37 +10,43 @@
 # Numpad0,Numpad1,Numpad2,Numpad3,Numpad4,Numpad5,Numpad6,Numpad7,Numpad8,Numpad9
 # Add,Subtract,Multiply,Decimal,Divide,Decimal,Separator
 
-# Reserved actions, case senstive
+# Reserved actions, case sensitive
 # OnTop = Switch TopMost for active window
 # Close = Close active window
 # Minimize = Minimize active window
 # Hide = Push and hide active window
 # Unhide = Pop and show last hide window
 # Maximize = Maximize active window
-# Minimize active window
 # Text = Input text to caret
 # Reload = Restart this application
+# OnBottom = Set active window behind all window
+# Keys = Send keys or text, comma separator, text include by "", Example: 
+#      Keys ctrl+A,"Hello\nWorld", ctrl+Backspace,"测试", ctrl+s
 
 # 摸鱼专用
 win+`=Hide
-alt+`=Unhide
+win+shift+`=Unhide
 win+F2=notepad.exe config.txt
 win+F3=Reload
 win+F4=Text Hello,\n\tworld，测试专用
-win+F5=Keys ctrl+A,"Hello\nWorld", ctrl+Backspace,"测试", ctrl+s
+# Refresh system desktop, icon
+win+F5=rundll32.exe AppXDeploymentExtensions.OneCore.dll,ShellRefresh
 win+F12=dbgview.exe
-win+ctrl+tab=Text \t
-win+n=notepad.exe
-win+z=OnTop
+win+shift+tab=Text \t
+win+n=notepad
+win+q=cmd
+alt+`=OnTop
+alt+Escape=OnBottom
+win+Escape=Close
+
+# Auto adjust column width for list control
+win+\=Keys ctrl+Add
+
 alt+win+c=control panel
-alt+win+s=services.msc
-alt+win+m=compmgmt.msc
-win+q=Close
+alt+win+s=compmgmt.msc
 win+alt+h=notepad.exe C:\windows\system32\drivers\etc\hosts
-ctrl+win+a="C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
-ctrl+win+c=calc.exe
-ctrl+win+d=cleanmgr.exe
-ctrl+win+i=rundll32.exe AppXDeploymentExtensions.OneCore.dll,ShellRefresh
+# View my IP Address
+ctrl+win+i=cmd /k ipconfig /all | find "IPv4 Address"
 
 # Windows Reserved Hotkeys
 # win+a=Open Action Center
@@ -60,7 +66,7 @@ ctrl+win+i=rundll32.exe AppXDeploymentExtensions.OneCore.dll,ShellRefresh
 # win+p=Open screen project
 # win+q=Open quick search
 # win+r=Open run dialog
-# win+s=Open searc bar
+# win+s=Open search bar
 # win+t=Switch task application in task bar
 # win+u=Open display settings
 # win+v=Open clipboard history
@@ -68,7 +74,6 @@ ctrl+win+i=rundll32.exe AppXDeploymentExtensions.OneCore.dll,ShellRefresh
 # win+x=Open mobility center
 # win+y=Open Xbox Game Bar plugin
 
-# Switch TopMost active window
 # win+Escape=Quit windows zoom
 # win+-=Zoom out
 # win++=Zoom in
@@ -77,7 +82,7 @@ ctrl+win+i=rundll32.exe AppXDeploymentExtensions.OneCore.dll,ShellRefresh
 ctrl+win+a=
 ctrl+win+b=
 ctrl+win+c=
-ctrl+win+d=
+# ctrl+win+d=New virtual desktop
 ctrl+win+e=
 ctrl+win+f=
 ctrl+win+g=
@@ -90,7 +95,7 @@ ctrl+win+m=
 ctrl+win+n=
 ctrl+win+o=
 ctrl+win+p=
-# ctrl+win+q=Qick assistence
+# ctrl+win+q=Quick assistance
 ctrl+win+r=
 # ctrl+win+s=Open voice input settings
 ctrl+win+t=
