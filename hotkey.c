@@ -439,23 +439,24 @@ DWORD GetProcessIdByName(const MCHAR* processName) {
   pe32.dwSize = sizeof(PROCESSENTRY32);
 
   HANDLE snapshot = (HANDLE) CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-  if (snapshot != INVALID_HANDLE_VALUE) {
-    if (Process32First(snapshot, &pe32)) {
-      do {
-#ifdef UNICODE
-        MCHAR wszExeFile[MAX_PATH] = {0};
-        MultiByteToWideChar(65001, 0, pe32.szExeFile, -1, wszExeFile, MAX_PATH);
-        if (StrStr(processName, wszExeFile) != NULL) {
-#else
-        if (StrStr(processName, pe32.szExeFile) != NULL) {
-#endif
-          pid = pe32.th32ProcessID;
-          break;
-        }
-      } while (Process32Next(snapshot, &pe32));
-    }
-    CloseHandle(snapshot);
+  if (snapshot == INVALID_HANDLE_VALUE) {
+    return pid;
   }
+  while (Process32Next(snapshot, &pe32)) {
+    OutputDebugStringA(pe32.szExeFile);
+#ifdef UNICODE
+    MCHAR wszExeFile[MAX_PATH] = {0};
+    MultiByteToWideChar(65001, 0, pe32.szExeFile, -1, wszExeFile, MAX_PATH);
+    if (StrStr(processName, wszExeFile) != NULL) {
+#else
+     if (StrStr(processName, pe32.szExeFile) != NULL) {
+#endif
+      pid = pe32.th32ProcessID;
+      break;
+    }
+  }
+  CloseHandle(snapshot);
+
   return pid;
 }
 
