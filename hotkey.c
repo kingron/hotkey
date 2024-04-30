@@ -15,6 +15,8 @@
 #define LWSTDAPI_(type) EXTERN_C DECLSPEC_IMPORT type WINAPI
 LWSTDAPI_(WINBOOL) StrTrimA(LPSTR psz,LPCSTR pszTrimChars);
 LWSTDAPI_(WINBOOL) StrTrimW(LPWSTR psz,LPCWSTR pszTrimChars);
+LWSTDAPI_(LPSTR) StrStrIA(LPCSTR lpFirst,LPCSTR lpSrch);
+LWSTDAPI_(LPWSTR) StrStrIW(LPCWSTR lpFirst,LPCWSTR lpSrch);
 
 #ifdef UNICODE
 #define U(x) L##x
@@ -34,6 +36,7 @@ LWSTDAPI_(WINBOOL) StrTrimW(LPWSTR psz,LPCWSTR pszTrimChars);
 #define DebugV(x) OutputDebugStringW(x)
 #define StrTrim StrTrimW
 #define my_strrchr wcsrchr
+#define StrStr StrStrIW
 #else
 #define U(x) x
 #define MCHAR char
@@ -52,6 +55,7 @@ LWSTDAPI_(WINBOOL) StrTrimW(LPWSTR psz,LPCWSTR pszTrimChars);
 #define DebugV(x) OutputDebugStringA(x)
 #define StrTrim StrTrimA
 #define my_strrchr strrchr
+#define StrStr StrStrIA
 #endif
 
 #define MAX_STACK_SIZE 10
@@ -429,42 +433,21 @@ void doKeys(MCHAR *keys) {
   }
 }
 
-MCHAR* strcasestr(const MCHAR* target, const MCHAR* sub) {
-  if (*sub == '\0') {
-      return (MCHAR*) target;
-  }
-  while (*target != '\0') {
-    if (tolower(*target) == tolower(*sub)) {
-      const MCHAR* h = target;
-      const MCHAR* n = sub;
-      while (*n != '\0' && tolower(*h) == tolower(*n)) {
-        h++;
-        n++;
-      }
-      if (*n == '\0') {
-          return (MCHAR*) target;
-      }
-    }
-    target++;
-  }
-  return NULL;
-}
-
 DWORD GetProcessIdByName(const MCHAR* processName) {
   DWORD pid = 0;
-  HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+  PROCESSENTRY32 pe32 = {0};
+  pe32.dwSize = sizeof(PROCESSENTRY32);
+
+  HANDLE snapshot = (HANDLE) CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
   if (snapshot != INVALID_HANDLE_VALUE) {
-    PROCESSENTRY32 pe32;
-    pe32.dwSize = sizeof(PROCESSENTRY32);
     if (Process32First(snapshot, &pe32)) {
       do {
-        // OutputDebugStringA(pe32.szExeFile);
 #ifdef UNICODE
         MCHAR wszExeFile[MAX_PATH] = {0};
         MultiByteToWideChar(65001, 0, pe32.szExeFile, -1, wszExeFile, MAX_PATH);
-        if (strcasestr(processName, wszExeFile) != NULL) {
+        if (StrStr(processName, wszExeFile) != NULL) {
 #else
-        if (strcasestr(processName, pe32.szExeFile) != NULL) {
+        if (StrStr(processName, pe32.szExeFile) != NULL) {
 #endif
           pid = pe32.th32ProcessID;
           break;
