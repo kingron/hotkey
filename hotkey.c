@@ -181,7 +181,7 @@ void ToggleTopmost(HWND hWnd) {
 }
 
 void warnHideWindow() {
-  MessageBox(GetForegroundWindow, U("Please unhide all windows first."), U("Warning"), MB_OK | MB_ICONASTERISK | MB_TOPMOST);
+  MessageBox(GetForegroundWindow(), U("Please unhide all windows first."), U("Warning"), MB_OK | MB_ICONASTERISK | MB_TOPMOST);
 }
 
 void SetDefaultFont(HWND hWnd)
