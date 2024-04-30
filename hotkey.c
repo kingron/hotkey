@@ -420,9 +420,9 @@ void doKeys(MCHAR *keys) {
   MCHAR *nextToken;
   token = (MCHAR*) my_strtok(buf, U(","), &nextToken);
   while (token != NULL) {
-    StrTrim(token, " \r\n\t");
+    StrTrim(token, U(" \r\n\t"));
     if (token[0] == '"') {
-      StrTrim(token, "\"");
+      StrTrim(token, U("\""));
       SendText(token);
     } else {
       HotkeyAction hotkey;
