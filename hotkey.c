@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <windows.h>
+#include <math.h>
 
 #define LWSTDAPI_(type) EXTERN_C DECLSPEC_IMPORT type WINAPI
 LWSTDAPI_(WINBOOL) StrTrimA(LPSTR psz,LPCSTR pszTrimChars);
@@ -37,6 +38,7 @@ LWSTDAPI_(LPWSTR) StrStrIW(LPCWSTR lpFirst,LPCWSTR lpSrch);
 #define StrTrim StrTrimW
 #define my_strrchr wcsrchr
 #define StrStr StrStrIW
+#define my_vsprintf vswprintf_s
 #else
 #define U(x) x
 #define MCHAR char
@@ -56,7 +58,17 @@ LWSTDAPI_(LPWSTR) StrStrIW(LPCWSTR lpFirst,LPCWSTR lpSrch);
 #define StrTrim StrTrimA
 #define my_strrchr strrchr
 #define StrStr StrStrIA
+#define my_vsprintf vsnprintf_s
 #endif
+
+void Log(MCHAR *format, ...) {
+  MCHAR log[1000] = {0};
+  va_list args;
+  va_start(args, format);
+  my_vsprintf(log, 1000, format, args);
+  va_end(args);
+  DebugV(log);
+}
 
 #define MAX_STACK_SIZE 10
 typedef struct {
@@ -221,27 +233,172 @@ void createWindow() {
   SetDefaultFont(g_hwndEdit);
 }
 
+typedef enum {
+  GESTURE_NONE,
+  GESTURE_LEFT,  // ←
+  GESTURE_RIGHT, // →
+  GESTURE_UP,    // ↑
+  GESTURE_DOWN,  // ↓
+  GESTURE_UP_RIGHT,  // ↗
+  GESTURE_UP_LEFT,   // ↖
+  GESTURE_DOWN_RIGHT, // ↘
+  GESTURE_DOWN_LEFT,  // ↙
+  GESTURE_DOWN_THEN_RIGHT, // ↓→
+  GESTURE_DOWN_THEN_LEFT,  // ↓←
+  GESTURE_UP_THEN_RIGHT,  // ↑→
+  GESTURE_UP_THEN_LEFT, // ↑←
+  GESTURE_RIGHT_THEN_UP,  // →↑
+  GESTURE_RIGHT_THEN_DOWN, // →↓
+  GESTURE_LEFT_THEN_UP,   // ←↑
+  GESTURE_LEFT_THEN_DOWN, // ←↓
+  GESTURE_GREATER_THAN,   // >
+  GESTURE_LESS_THAN       // <
+} Gesture;
+
+void DrawLine(HDC hdc, int x1, int y1, int x2, int y2) {
+  MoveToEx(hdc, x1, y1, NULL);
+  LineTo(hdc, x2, y2);
+}
+
 HHOOK g_hook = NULL;
+BOOL bDrawing = FALSE;
+POINT ptStart = {0};
+POINT ptEnd = {0};
+HDC hdc = 0;
+HPEN hPen;
+
+#define INITIAL_QUEUE_CAPACITY 100
+#define QUEUE_GROWTH_FACTOR 2
+POINT* queue = NULL;
+int queueCapacity = 0;
+int queueSize = 0;
+int queueIndex = 0;
+
+void enqueue(POINT p) {
+  if (queueSize >= queueCapacity) {
+    int newCapacity = queueCapacity == 0 ? INITIAL_QUEUE_CAPACITY : queueCapacity * QUEUE_GROWTH_FACTOR;
+    POINT* newQueue = (POINT*)realloc(queue, newCapacity * sizeof(POINT));
+    if (newQueue == NULL) {
+      exit(1);
+    }
+    queue = newQueue;
+    queueCapacity = newCapacity;
+  }
+  queue[queueSize++] = p;
+}
+
+void clearQueue() {
+  queueSize = 0;
+  queueIndex = 0;
+}
+
+double calculateAngle(POINT P1, POINT P2) {
+  double rad = atan2(P2.y - P1.y, P2.x - P1.x);
+  double degree = rad * 180.0 / 3.1415926f;
+  return degree;
+}
+
+const double ANGLE_ERROR = 15.0;
+Gesture getGesture() {
+  if (queueSize < 3) {
+    return GESTURE_NONE;
+  }
+
+  POINT first = queue[0];
+  POINT middle = queue[queueSize / 2];
+  POINT last = queue[queueSize - 1];
+
+  int dx1 = middle.x - first.x;
+  int dy1 = middle.y - first.y;
+  int dx2 = last.x - middle.x;
+  int dy2 = last.y - middle.y;
+  double a1 = calculateAngle(first, middle);
+  double a2 = calculateAngle(middle, last);
+
+  Log(U("dx1=%d, dy1=%d, dx2=%d, dy2=%d, a1=%f, a2=%f"), dx1, dy1, dx2, dy2, a1, a2);
+  if (a1 > -ANGLE_ERROR && a1 < ANGLE_ERROR && a2 >-ANGLE_ERROR && a2 < ANGLE_ERROR) {
+    return GESTURE_RIGHT; // →
+  } else if (a1 > (90 - ANGLE_ERROR) && a1 < (90 + ANGLE_ERROR) && a2 > (90 - ANGLE_ERROR) && a2 <= 180) {
+    return GESTURE_DOWN;  // ↓
+  } else if (abs(a1) > (180 - ANGLE_ERROR) && abs(a1) <= 180 && abs(a2) > (180 - ANGLE_ERROR) && abs(a2) < (90 + ANGLE_ERROR)) {
+    return GESTURE_LEFT;  // ←
+  } else if (a1 > (-90 - ANGLE_ERROR) && a1 < (-90 + ANGLE_ERROR) && a2 > (-90 - ANGLE_ERROR) && a2 < (-90 + ANGLE_ERROR)) {
+    return GESTURE_UP;    // ↑
+  } else if (a1 > (-45 - ANGLE_ERROR) && a1 < (-45 + ANGLE_ERROR) && a2 > (-45 - ANGLE_ERROR) && a2 < (-45 + ANGLE_ERROR)) {
+    return GESTURE_UP_RIGHT; // ↗
+  } else if (a1 > (45 - ANGLE_ERROR) && a1 < (45 + ANGLE_ERROR) && a2 > (45 - ANGLE_ERROR) && a2 < (45 + ANGLE_ERROR)) {
+    return GESTURE_DOWN_RIGHT; // ↘
+  } else if (a1 > (-135 - ANGLE_ERROR) && a1 < (-135 + ANGLE_ERROR) && a2 > (-135 - ANGLE_ERROR) && a2 < (-135 + ANGLE_ERROR)) {
+    return GESTURE_UP_LEFT;   // ↖
+  } else if (a1 > (135 - ANGLE_ERROR) && a1 < (135 + ANGLE_ERROR) && a2 > (135 - ANGLE_ERROR) && a2 < (135 + ANGLE_ERROR)) {
+    return GESTURE_DOWN_LEFT; // ↙
+  }
+
+  return GESTURE_NONE;
+}
+
 unsigned short g_mouseState = 0;
 LRESULT CALLBACK MouseProc(int nCode, WPARAM wParam, LPARAM lParam) {
-  if (nCode >= 0) {
-    if (nCode >= 0) {
-      if (WM_RBUTTONDOWN == wParam) {
-        g_mouseState |= 0x01;
-      } else if (WM_LBUTTONDOWN == wParam) {
-        if (g_mouseState == 0x01) {
-          g_mouseState |= 0x02;
-        }
-      } else if (WM_LBUTTONUP == wParam) {
-        if ((g_mouseState & 0x03) == 0x03) {
-            g_mouseState |= 0x04;
-        }
-      } else if (WM_RBUTTONUP == wParam) {
-        if ((g_mouseState & 0x07) == 0x07) {
-            SendKey('W', MOD_CONTROL);
-        }
-        g_mouseState = 0;
+  if (nCode < 0) {
+    return CallNextHookEx(g_hook, nCode, wParam, lParam);
+  }
+
+  if (WM_RBUTTONDOWN == wParam) {
+    g_mouseState |= 0x01;
+    bDrawing = TRUE;
+    Log(U("RB Down: %x"), g_mouseState);
+    ptStart = ((MSLLHOOKSTRUCT*)lParam)->pt;
+    ptEnd = ptStart;
+    enqueue(ptStart);
+    hdc = GetDC(NULL);
+    hPen = CreatePen(PS_SOLID, 10, RGB(0, 0, 255));
+    SelectObject(hdc, hPen);
+  } else if (WM_LBUTTONDOWN == wParam) {
+    if (g_mouseState == 0x01) {
+      g_mouseState |= 0x02;
+    }
+    Log(U("LB Down: %x"), g_mouseState);
+  } else if (WM_LBUTTONUP == wParam) {
+    if ((g_mouseState & 0x03) == 0x03) {
+      g_mouseState |= 0x04;
+    }
+    Log(U("LB Up: %x"), g_mouseState);
+  } else if (WM_RBUTTONUP == wParam) {
+    bDrawing = FALSE;
+    ReleaseDC(NULL, hdc);
+    DeleteObject(hPen);
+    InvalidateRect(NULL, NULL, TRUE);
+
+    Log(U("RB Up: %x"), g_mouseState);
+    if (g_mouseState == 0x07 || g_mouseState  == 0x03) {
+      char className[256];
+      GetClassName(GetForegroundWindow(), className, sizeof(className));
+      if (my_stricmp(className, U("Chrome_WidgetWin_1")) == 0) {
+        SendKey('W', MOD_CONTROL);
+      } else {
+        SendMessage(GetForegroundWindow(), WM_CLOSE, 0, 0);
       }
+    }
+    g_mouseState = 0;
+
+    Gesture gesture = getGesture();
+    Log(U("Gesture: %ld"), gesture);
+    if (gesture == GESTURE_UP_RIGHT) {
+      ShowWindow(GetForegroundWindow(), SW_MAXIMIZE);
+    } else if (gesture == GESTURE_DOWN_LEFT) {
+      ShowWindow(GetForegroundWindow(), SW_MINIMIZE);
+    } else if (gesture == GESTURE_DOWN) {
+      SendKey(VK_END, MOD_CONTROL);
+    } else if (gesture == GESTURE_UP) {
+      SendKey(VK_HOME, MOD_CONTROL);
+    }
+    clearQueue();
+  } else if (wParam == WM_MOUSEMOVE) {
+    if (bDrawing) {
+      ptEnd = ((MSLLHOOKSTRUCT*)lParam)->pt;
+      DrawLine(hdc, ptStart.x, ptStart.y, ptEnd.x, ptEnd.y);
+      ptStart = ptEnd;
+      enqueue(ptStart);
     }
   }
 
@@ -293,6 +450,9 @@ int main(int argc, char *argv[])
   }
   free(hotkeyActions);
   RemoveTrayIcon(g_hWnd);
+
+  free(queue);
+  queue = NULL;
   return 0;
 }
 
@@ -320,31 +480,31 @@ void extractCmdAndParameter(const MCHAR *action, MCHAR *cmd, MCHAR *parameter) {
 }
 
 void unescape(const MCHAR* input, MCHAR* output) {
-    while (*input) {
-        if (*input == '\\' && *(input + 1)) {
-            switch (*(input + 1)) {
-                case 'n':
-                    *output++ = '\n';
-                    break;
-                case 't':
-                    *output++ = '\t';
-                    break;
-                case 'r':
-                    *output++ = '\r';
-                    break;
-                case '\\':
-                    *output++ = '\\';
-                    break;
-                default:
-                    *output++ = *(input + 1);
-                    break;
-            }
-            input += 2;
-        } else {
-            *output++ = *input++;
-        }
+  while (*input) {
+    if (*input == '\\' && *(input + 1)) {
+      switch (*(input + 1)) {
+        case 'n':
+          *output++ = '\n';
+          break;
+        case 't':
+          *output++ = '\t';
+          break;
+        case 'r':
+          *output++ = '\r';
+          break;
+        case '\\':
+          *output++ = '\\';
+          break;
+        default:
+          *output++ = *(input + 1);
+          break;
+      }
+      input += 2;
+    } else {
+      *output++ = *input++;
     }
-    *output = '\0';
+  }
+  *output = '\0';
 }
 
 void SendText(const MCHAR* string) {
