@@ -371,7 +371,7 @@ LRESULT CALLBACK MouseProc(int nCode, WPARAM wParam, LPARAM lParam) {
 
     Log(U("RB Up: %x"), g_mouseState);
     if (g_mouseState == 0x07 || g_mouseState  == 0x03) {
-      char className[256];
+      MCHAR className[256];
       GetClassName(GetForegroundWindow(), className, sizeof(className));
       if (my_stricmp(className, U("Chrome_WidgetWin_1")) == 0) {
         SendKey('W', MOD_CONTROL);
