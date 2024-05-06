@@ -58,7 +58,7 @@ LWSTDAPI_(LPWSTR) StrStrIW(LPCWSTR lpFirst,LPCWSTR lpSrch);
 #define StrTrim StrTrimA
 #define my_strrchr strrchr
 #define StrStr StrStrIA
-#define my_vsprintf vsnprintf_s
+#define my_vsprintf vsprintf_s
 #endif
 
 void Log(MCHAR *format, ...) {
