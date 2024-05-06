@@ -318,9 +318,9 @@ Gesture getGesture() {
   Log(U("dx1=%d, dy1=%d, dx2=%d, dy2=%d, a1=%f, a2=%f"), dx1, dy1, dx2, dy2, a1, a2);
   if (a1 > -ANGLE_ERROR && a1 < ANGLE_ERROR && a2 >-ANGLE_ERROR && a2 < ANGLE_ERROR) {
     return GESTURE_RIGHT; // →
-  } else if (a1 > (90 - ANGLE_ERROR) && a1 < (90 + ANGLE_ERROR) && a2 > (90 - ANGLE_ERROR) && a2 <= 180) {
+  } else if (a1 > (90 - ANGLE_ERROR) && a1 < (90 + ANGLE_ERROR) && a2 > (90 - ANGLE_ERROR) && a2 < 90 + ANGLE_ERROR) {
     return GESTURE_DOWN;  // ↓
-  } else if (abs(a1) > (180 - ANGLE_ERROR) && abs(a1) <= 180 && abs(a2) > (180 - ANGLE_ERROR) && abs(a2) < (90 + ANGLE_ERROR)) {
+  } else if (abs(a1) > (180 - ANGLE_ERROR) && abs(a1) <= 180 && abs(a2) > (180 - ANGLE_ERROR) && abs(a2) <= 180) {
     return GESTURE_LEFT;  // ←
   } else if (a1 > (-90 - ANGLE_ERROR) && a1 < (-90 + ANGLE_ERROR) && a2 > (-90 - ANGLE_ERROR) && a2 < (-90 + ANGLE_ERROR)) {
     return GESTURE_UP;    // ↑
