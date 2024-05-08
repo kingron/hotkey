@@ -391,6 +391,12 @@ LRESULT CALLBACK MouseProc(int nCode, WPARAM wParam, LPARAM lParam) {
       SendKey(VK_END, MOD_CONTROL);
     } else if (gesture == GESTURE_UP) {
       SendKey(VK_HOME, MOD_CONTROL);
+    } else if (gesture == GESTURE_RIGHT) {
+      SendKey(VK_RIGHT, MOD_ALT);
+      return 1;
+    } else if (gesture == GESTURE_LEFT) {
+      SendKey(VK_LEFT, MOD_ALT);
+      return 1;
     }
     clearQueue();
   } else if (wParam == WM_MOUSEMOVE) {
