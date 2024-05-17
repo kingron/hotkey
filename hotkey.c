@@ -385,12 +385,15 @@ LRESULT CALLBACK MouseProc(int nCode, WPARAM wParam, LPARAM lParam) {
     Log(U("Gesture: %ld"), gesture);
     if (gesture == GESTURE_UP_RIGHT) {
       ShowWindow(GetForegroundWindow(), SW_MAXIMIZE);
+      return 1;
     } else if (gesture == GESTURE_DOWN_LEFT) {
       ShowWindow(GetForegroundWindow(), SW_MINIMIZE);
     } else if (gesture == GESTURE_DOWN) {
       SendKey(VK_END, MOD_CONTROL);
+      return 1;
     } else if (gesture == GESTURE_UP) {
       SendKey(VK_HOME, MOD_CONTROL);
+      return 1;
     } else if (gesture == GESTURE_RIGHT) {
       SendKey(VK_RIGHT, MOD_ALT);
       return 1;
